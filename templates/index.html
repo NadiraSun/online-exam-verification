@@ -1,1 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Integrator Exam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            font-size: 20px;
+            padding: 10px 20px;
+            margin: 20px;
+            cursor: pointer;
+        }
+        #video-container {
+            margin: 20px auto;
+            width: 800px;
+            height: 600px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Integrator Exam</h1>
+    <div id="video-container">
+        <img src="{{ url_for('video_feed') }}" width="800" height="600">
+    </div>
+    <form method="post" action="/identify">
+        <button type="submit">Идентификация студента</button>
+    </form>
+    {% if identified %}
+        <p>Идентификация прошла успешно.</p>
+        <form method="post" action="/start_exam">
+            <button type="submit">Начать экзамен</button>
+        </form>
+    {% elif identified is not none %}
+        <p>Идентификация не прошла.</p>
+    {% endif %}
+</body>
+</html>
  
