@@ -1,17 +1,11 @@
 from flask import Flask, render_template, Response, request
 import cv2
-from face_recognition_utils import recognize_face, is_live
+from face_recognition_utils import recognize_face, is_live, load_known_faces
 
 app = Flask(__name__)
 
-def release_camera():
-    global camera
-    if camera.isOpened():
-        camera.release()
-
 camera = cv2.VideoCapture(0)
-if not camera.isOpened():
-    print("Ошибка: не удается открыть камеру")
+load_known_faces('st_images')
 
 @app.route('/')
 def index():
@@ -25,7 +19,7 @@ def identify():
         return render_template('index.html', identified=False)
 
     small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-    face_locations, face_names = recognize_face(small_frame)
+    face_locations, face_names, _ = recognize_face(small_frame)
 
     if face_names and len(face_names) == 1 and "Unknown" not in face_names:
         return render_template('index.html', identified=True)
@@ -37,7 +31,6 @@ def start_exam():
     return render_template('exam_started.html')
 
 def gen_frames():
-    global camera
     ret, prev_frame = camera.read()
     if not ret:
         print("Ошибка: не удается захватить начальный кадр")
@@ -50,13 +43,14 @@ def gen_frames():
             break
 
         small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-        face_locations, face_names = recognize_face(small_frame)
+        face_locations, face_names, similarities = recognize_face(small_frame)
 
         if face_locations is not None and len(face_locations) == 1:
-            (x1, y1, x2, y2), name = face_locations[0], face_names[0]
+            (x1, y1, x2, y2), name, similarity = face_locations[0], face_names[0], similarities[0]
             x1, y1, x2, y2 = int(x1 * 2), int(y1 * 2), int(x2 * 2), int(y2 * 2)
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-            cv2.putText(frame, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 0), 1)
+            text = f"{name} ({similarity * 100:.2f}%)"
+            cv2.putText(frame, text, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 0), 1)
 
         if is_live(prev_frame, frame):
             cv2.putText(frame, "Live", (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0), 2)
@@ -82,4 +76,5 @@ if __name__ == '__main__':
     try:
         app.run(host='0.0.0.0', port=5000)
     except KeyboardInterrupt:
-        release_camera()
+        if camera.isOpened():
+            camera.release()
